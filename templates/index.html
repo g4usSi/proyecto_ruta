@@ -306,8 +306,47 @@
             <div class="panel">
                 <h2>⚙️ Control</h2>
 
-                <button class="boton boton-principal" onclick="crearGrafoEjemplo()">
-                    📊 Cargar Grafo de Ejemplo
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #555;">Tipo de Grafo:</label>
+                        <select id="tipoGrafo" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;">
+                            <option value="false">No Dirigido</option>
+                            <option value="true">Dirigido</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #555;">&nbsp;</label>
+                        <button class="boton boton-principal" onclick="iniciarGrafo()" style="width: 100%;">
+                            ➕ Nuevo Grafo
+                        </button>
+                    </div>
+                </div>
+
+                <button class="boton boton-secundario" onclick="crearGrafoEjemplo()" style="width: 100%; margin-top: 10px;">
+                    📊 Cargar Ejemplo
+                </button>
+
+                <hr style="margin: 20px 0; border: none; border-top: 2px solid #eee;">
+
+                <h3 style="color: #555; font-size: 1.1em; margin-bottom: 15px;">📝 Agregar Arista</h3>
+
+                <div class="formulario-grupo">
+                    <label for="inputArOrigen">Nodo Origen:</label>
+                    <input type="text" id="inputArOrigen" placeholder="Ej: A" maxlength="5">
+                </div>
+
+                <div class="formulario-grupo">
+                    <label for="inputArDestino">Nodo Destino:</label>
+                    <input type="text" id="inputArDestino" placeholder="Ej: B" maxlength="5">
+                </div>
+
+                <div class="formulario-grupo">
+                    <label for="inputPeso">Peso:</label>
+                    <input type="number" id="inputPeso" placeholder="1" value="1" min="0.1" step="0.1">
+                </div>
+
+                <button class="boton boton-principal" onclick="agregarArista()" style="width: 100%;">
+                    ✅ Agregar Arista
                 </button>
 
                 <div class="estado-grafo" id="estadoGrafo">
@@ -389,6 +428,86 @@
             document.getElementById('cargando').classList.toggle('activo', visible);
         }
 
+        function actualizarEstadoGrafo(nodos, aristas) {
+            document.getElementById('estadoGrafo').classList.add('activo');
+            document.getElementById('numNodos').textContent = nodos.join(', ') || 'ninguno';
+            document.getElementById('numAristas').textContent = aristas.length;
+        }
+
+        function iniciarGrafo() {
+            limpiarErrores();
+            const dirigido = document.getElementById('tipoGrafo').value === 'true';
+
+            fetch('/iniciar_grafo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dirigido })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.exito) {
+                    alert(`✓ ${data.mensaje}`);
+                    document.getElementById('resultado').classList.remove('activo');
+                    actualizarEstadoGrafo([], []);
+                } else {
+                    mostrarError(data.error);
+                }
+            })
+            .catch(err => mostrarError('Error: ' + err.message));
+        }
+
+        function agregarArista() {
+            limpiarErrores();
+            const origen = document.getElementById('inputArOrigen').value.trim().toUpperCase();
+            const destino = document.getElementById('inputArDestino').value.trim().toUpperCase();
+            const peso = parseFloat(document.getElementById('inputPeso').value);
+
+            if (!origen || !destino) {
+                mostrarError('Ingrese origen y destino');
+                return;
+            }
+
+            if (isNaN(peso) || peso <= 0) {
+                mostrarError('Ingrese un peso válido (mayor a 0)');
+                return;
+            }
+
+            mostrarCargando(true);
+
+            fetch('/agregar_arista', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ origen, destino, peso })
+            })
+            .then(res => res.json())
+            .then(data => {
+                mostrarCargando(false);
+                if (data.exito) {
+                    // Limpiar inputs
+                    document.getElementById('inputArOrigen').value = '';
+                    document.getElementById('inputArDestino').value = '';
+                    document.getElementById('inputPeso').value = '1';
+
+                    // Actualizar estado
+                    actualizarEstadoGrafo(data.nodos, data.aristas);
+
+                    // Mostrar imagen del grafo
+                    if (data.imagen) {
+                        const resultDiv = document.getElementById('resultado');
+                        resultDiv.classList.add('activo');
+                        document.getElementById('grafoImagen').src = `data:image/png;base64,${data.imagen}`;
+                        document.getElementById('infoAutomata').classList.remove('activo');
+                    }
+                } else {
+                    mostrarError(data.error);
+                }
+            })
+            .catch(err => {
+                mostrarCargando(false);
+                mostrarError('Error: ' + err.message);
+            });
+        }
+
         function crearGrafoEjemplo() {
             limpiarErrores();
             mostrarCargando(true);
@@ -400,9 +519,14 @@
             .then(data => {
                 mostrarCargando(false);
                 if (data.exito) {
-                    document.getElementById('estadoGrafo').classList.add('activo');
-                    document.getElementById('numNodos').textContent = data.nodos.join(', ');
-                    document.getElementById('numAristas').textContent = data.aristas.length;
+                    actualizarEstadoGrafo(data.nodos, data.aristas);
+                    
+                    // Mostrar imagen del grafo
+                    if (data.imagen) {
+                        document.getElementById('resultado').classList.add('activo');
+                        document.getElementById('grafoImagen').src = `data:image/png;base64,${data.imagen}`;
+                        document.getElementById('infoAutomata').classList.remove('activo');
+                    }
                 } else {
                     mostrarError(data.error);
                 }
