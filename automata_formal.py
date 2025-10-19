@@ -1,25 +1,5 @@
 class Automata:
-    """
-    Clase que modela formalmente el sistema de búsqueda de rutas como un autómata.
-    
-    Elementos del autómata (A = (Q, Σ, δ, q₀, F, w)):
-    - Q: Conjunto de estados (nodos del grafo)
-    - Σ: Alfabeto (etiquetas de transiciones/aristas)
-    - δ: Función de transición (adyacencia del grafo)
-    - q₀: Estado inicial (nodo origen)
-    - F: Estados de aceptación (nodo destino)
-    - w: Función de pesos (costos de transiciones)
-    """
-    
     def __init__(self, grafo, estado_inicial, estados_aceptacion):
-        """
-        Inicializa el autómata basado en un grafo.
-        
-        Args:
-            grafo: Objeto Grafo
-            estado_inicial: Nodo origen (q₀)
-            estados_aceptacion: Lista de nodos destino (F)
-        """
         self.grafo = grafo
         self.Q = set(grafo.obtener_nodos())  # Estados
         self.q0 = estado_inicial              # Estado inicial
@@ -35,13 +15,12 @@ class Automata:
         
         for origen in self.grafo.adyacencia:
             for destino, peso in self.grafo.adyacencia[origen]:
-                # Crear símbolo de transición: "origen->destino"
+                # Crear simbolo de transicion: "origen -> destino"
                 simbolo = f"{origen}→{destino}"
                 self.sigma.add(simbolo)
     
     def _construir_transiciones(self):
-        """Construye la función de transición δ y pesos w"""
-        self.delta = {}  # Función de transición
+        self.delta = {}  # Funcion de transicion
         self.w = {}      # Función de pesos
         
         for origen in self.grafo.adyacencia:
@@ -54,20 +33,6 @@ class Automata:
                 self.w[simbolo] = peso
     
     def procesar_cadena(self, cadena_nodos):
-        """
-        Verifica si una cadena (secuencia de nodos) es aceptada por el autómata.
-        
-        Args:
-            cadena_nodos: Lista de nodos [n1, n2, n3, ...]
-        
-        Returns:
-            dict: {
-                'aceptada': bool,
-                'estado_actual': nodo actual o None,
-                'paso_fallo': índice donde falló (None si se acepta),
-                'costo_total': suma de pesos de transiciones
-            }
-        """
         if len(cadena_nodos) < 2:
             return {
                 'aceptada': False,
@@ -118,7 +83,6 @@ class Automata:
         }
     
     def obtener_descripcion_formal(self):
-        """Retorna la descripción formal del autómata"""
         return {
             'Q': sorted(list(self.Q)),              # Estados
             'sigma': sorted(list(self.sigma)),      # Alfabeto
