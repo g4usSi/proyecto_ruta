@@ -26,12 +26,10 @@ grafo_global = None
 
 @app.route('/')
 def inicio():
-    """Ruta principal - muestra el formulario"""
     return render_template('index.html')
 
 @app.route('/iniciar_grafo', methods=['POST'])
 def iniciar_grafo():
-    """Inicializa un nuevo grafo vacío"""
     global grafo_global
     
     datos = request.json
@@ -47,7 +45,6 @@ def iniciar_grafo():
 
 @app.route('/agregar_arista', methods=['POST'])
 def agregar_arista():
-    """Agrega una arista al grafo y retorna visualización actualizada"""
     global grafo_global
     
     if grafo_global is None:
@@ -160,7 +157,6 @@ def calcular_ruta():
 
 @app.route('/descargar_grafo/<formato>', methods=['GET'])
 def descargar_grafo(formato):
-    """Genera y descarga el grafo actual como PNG o PDF."""
     global grafo_global
 
     if grafo_global is None or len(grafo_global.obtener_nodos()) == 0:

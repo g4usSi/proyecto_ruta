@@ -2,10 +2,6 @@ import heapq
 from collections import defaultdict
 
 class Grafo:
-    """
-    Clase que representa un grafo ponderado dirigido o no dirigido.
-    Implementa el algoritmo de Dijkstra para encontrar la ruta más corta.
-    """
     
     def __init__(self, dirigido=False):
         self.adyacencia = defaultdict(list)
@@ -13,11 +9,9 @@ class Grafo:
         self.dirigido = dirigido
     
     def agregar_nodo(self, nodo):
-        """Agrega un nodo al grafo"""
         self.nodos.add(nodo)
     
     def agregar_arista(self, origen, destino, peso=1):
-        """Agrega una arista entre dos nodos con un peso específico"""
         self.agregar_nodo(origen)
         self.agregar_nodo(destino)
         
@@ -27,13 +21,6 @@ class Grafo:
             self.adyacencia[destino].append((origen, peso))
     
     def dijkstra(self, origen, destino):
-        """
-        Calcula la ruta más corta entre origen y destino usando Dijkstra.
-        
-        Retorna:
-            tuple: (distancia_total, ruta)
-                   ruta es una lista de nodos desde origen hasta destino
-        """
         if origen not in self.nodos or destino not in self.nodos:
             return None, []
         

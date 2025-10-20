@@ -37,7 +37,7 @@
         .boton-container {
             display: flex;
             justify-content: center;
-            margin-top: 25px; /* separa el botón de los demás elementos */
+            margin-top: 25px;
         }
 
         .boton-descarga {
@@ -115,6 +115,13 @@
             border-color: #667eea;
         }
 
+        .formulario-grupo input:disabled,
+        .formulario-grupo select:disabled {
+            background-color: #f5f5f5;
+            color: #999;
+            cursor: not-allowed;
+        }
+
         .botones {
             display: flex;
             gap: 10px;
@@ -137,10 +144,16 @@
             flex: 1;
         }
 
-        .boton-principal:hover {
+        .boton-principal:hover:not(:disabled) {
             background: #5568d3;
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .boton-principal:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
         }
 
         .boton-secundario {
@@ -160,8 +173,15 @@
             border: 2px solid #ddd;
         }
 
-        .boton-terciario:hover {
+        .boton-terciario:hover:not(:disabled) {
             background: #e8e8e8;
+        }
+
+        .boton-terciario:disabled {
+            background: #f5f5f5;
+            color: #999;
+            cursor: not-allowed;
+            border-color: #ddd;
         }
 
         .resultado {
@@ -311,6 +331,21 @@
             display: block;
         }
 
+        .seccion-bloqueada {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .advertencia {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            color: #856404;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
         @media (max-width: 900px) {
             .contenido {
                 grid-template-columns: 1fr;
@@ -352,50 +387,57 @@
 
                 <hr style="margin: 20px 0; border: none; border-top: 2px solid #eee;">
 
-                <h3 style="color: #555; font-size: 1.1em; margin-bottom: 15px;">📝 Agregar Arista</h3>
+                <!-- SECCIÓN BLOQUEADA AL INICIO -->
+                <div id="seccionAristas" class="seccion-bloqueada">
+                    <div class="advertencia" id="advertencia" style="display: none;">
+                        ⚠️ Inicia un grafo para agregar aristas
+                    </div>
 
-                <div class="formulario-grupo">
-                    <label for="inputArOrigen">Nodo Origen:</label>
-                    <input type="text" id="inputArOrigen" placeholder="Ej: A" maxlength="5">
+                    <h3 style="color: #555; font-size: 1.1em; margin-bottom: 15px;">📝 Agregar Arista</h3>
+
+                    <div class="formulario-grupo">
+                        <label for="inputArOrigen">Nodo Origen:</label>
+                        <input type="text" id="inputArOrigen" placeholder="Ej: A" maxlength="5" disabled>
+                    </div>
+
+                    <div class="formulario-grupo">
+                        <label for="inputArDestino">Nodo Destino:</label>
+                        <input type="text" id="inputArDestino" placeholder="Ej: B" maxlength="5" disabled>
+                    </div>
+
+                    <div class="formulario-grupo">
+                        <label for="inputPeso">Peso:</label>
+                        <input type="number" id="inputPeso" placeholder="1" value="1" min="0.1" step="0.1" disabled>
+                    </div>
+
+                    <button class="boton boton-principal" id="btnAgregarArista" onclick="agregarArista()" style="width: 100%;" disabled>
+                        ✅ Agregar Arista
+                    </button>
+
+                    <div class="estado-grafo" id="estadoGrafo">
+                        <p><strong>✓ Grafo cargado</strong></p>
+                        <p>Nodos: <span class="dato" id="numNodos">-</span></p>
+                        <p>Aristas: <span class="dato" id="numAristas">-</span></p>
+                    </div>
+
+                    <div class="formulario-grupo">
+                        <label for="inputOrigen">Nodo Origen:</label>
+                        <input type="text" id="inputOrigen" placeholder="Ej: A" maxlength="5" disabled>
+                    </div>
+
+                    <div class="formulario-grupo">
+                        <label for="inputDestino">Nodo Destino:</label>
+                        <input type="text" id="inputDestino" placeholder="Ej: E" maxlength="5" disabled>
+                    </div>
+
+                    <button class="boton boton-principal" id="btnCalcularRuta" onclick="calcularRuta()" disabled>
+                        🚀 Calcular Ruta
+                    </button>
+
+                    <button class="boton boton-terciario" id="btnInfoAutomata" onclick="obtenerInfoAutomata()" disabled>
+                        📋 Ver Info del Autómata
+                    </button>
                 </div>
-
-                <div class="formulario-grupo">
-                    <label for="inputArDestino">Nodo Destino:</label>
-                    <input type="text" id="inputArDestino" placeholder="Ej: B" maxlength="5">
-                </div>
-
-                <div class="formulario-grupo">
-                    <label for="inputPeso">Peso:</label>
-                    <input type="number" id="inputPeso" placeholder="1" value="1" min="0.1" step="0.1">
-                </div>
-
-                <button class="boton boton-principal" onclick="agregarArista()" style="width: 100%;">
-                    ✅ Agregar Arista
-                </button>
-
-                <div class="estado-grafo" id="estadoGrafo">
-                    <p><strong>✓ Grafo cargado</strong></p>
-                    <p>Nodos: <span class="dato" id="numNodos">-</span></p>
-                    <p>Aristas: <span class="dato" id="numAristas">-</span></p>
-                </div>
-
-                <div class="formulario-grupo">
-                    <label for="inputOrigen">Nodo Origen:</label>
-                    <input type="text" id="inputOrigen" placeholder="Ej: A" maxlength="5">
-                </div>
-
-                <div class="formulario-grupo">
-                    <label for="inputDestino">Nodo Destino:</label>
-                    <input type="text" id="inputDestino" placeholder="Ej: E" maxlength="5">
-                </div>
-
-                <button class="boton boton-principal" onclick="calcularRuta()">
-                    🚀 Calcular Ruta
-                </button>
-
-                <button class="boton boton-terciario" onclick="obtenerInfoAutomata()">
-                    📋 Ver Info del Autómata
-                </button>
 
                 <div class="cargando" id="cargando">
                     <div class="spinner"></div>
@@ -428,23 +470,59 @@
                     <img id="grafoImagen" class="grafo-imagen" alt="Visualización del grafo">
 
                     <div class="automata-info" id="infoAutomata">
-                        <h4> Información del Autómata</h4>
+                        <h4>Información del Autómata</h4>
                         <div id="detallesAutomata"></div>
                     </div>
 
-                    <!-- 🔽 Botón centrado y con estilo mejorado -->
                     <div class="boton-container">
                         <button class="boton boton-descarga" onclick="descargarGrafo('png')">
-                            🖼️ Descargar Grafo 1 (PNG)
+                            🖼️ Descargar Grafo (PNG)
                         </button>
                     </div>
                 </div>
             </div>
-
-
-            
+        </div>
+    </div>
 
     <script>
+    let grafoInicializado = false;
+
+    function habilitarSeccion(habilitar) {
+        grafoInicializado = habilitar;
+        const seccion = document.getElementById('seccionAristas');
+        const advertencia = document.getElementById('advertencia');
+        
+        if (habilitar) {
+            seccion.classList.remove('seccion-bloqueada');
+            advertencia.style.display = 'none';
+            
+            // Habilitar inputs
+            document.getElementById('inputArOrigen').disabled = false;
+            document.getElementById('inputArDestino').disabled = false;
+            document.getElementById('inputPeso').disabled = false;
+            document.getElementById('btnAgregarArista').disabled = false;
+            
+            document.getElementById('inputOrigen').disabled = false;
+            document.getElementById('inputDestino').disabled = false;
+            document.getElementById('btnCalcularRuta').disabled = false;
+            document.getElementById('btnInfoAutomata').disabled = false;
+        } else {
+            seccion.classList.add('seccion-bloqueada');
+            advertencia.style.display = 'block';
+            
+            // Deshabilitar inputs
+            document.getElementById('inputArOrigen').disabled = true;
+            document.getElementById('inputArDestino').disabled = true;
+            document.getElementById('inputPeso').disabled = true;
+            document.getElementById('btnAgregarArista').disabled = true;
+            
+            document.getElementById('inputOrigen').disabled = true;
+            document.getElementById('inputDestino').disabled = true;
+            document.getElementById('btnCalcularRuta').disabled = true;
+            document.getElementById('btnInfoAutomata').disabled = true;
+        }
+    }
+
     async function descargarGrafo(formato) {
         try {
             const response = await fetch(`/descargar_grafo/${formato}`, {
@@ -455,11 +533,9 @@
                 throw new Error('No se pudo generar la descarga');
             }
 
-            // Convertir a blob (archivo)
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
 
-            // Crear enlace temporal para descargar
             const a = document.createElement('a');
             a.href = url;
             a.download = `grafo.${formato}`;
@@ -471,206 +547,199 @@
             mostrarError(`❌ Error al descargar: ${error.message}`);
         }
     }
-</script>
 
-    <script>
-        function limpiarErrores() {
-            document.getElementById('error').classList.remove('activo');
-            document.getElementById('error').innerHTML = '';
-        }
+    function limpiarErrores() {
+        document.getElementById('error').classList.remove('activo');
+        document.getElementById('error').innerHTML = '';
+    }
 
-        function mostrarError(mensaje) {
-            const errorDiv = document.getElementById('error');
-            errorDiv.innerHTML = `${mensaje}`;
-            errorDiv.classList.add('activo');
-        }
+    function mostrarError(mensaje) {
+        const errorDiv = document.getElementById('error');
+        errorDiv.innerHTML = `${mensaje}`;
+        errorDiv.classList.add('activo');
+    }
 
-        function mostrarCargando(visible) {
-            document.getElementById('cargando').classList.toggle('activo', visible);
-        }
+    function mostrarCargando(visible) {
+        document.getElementById('cargando').classList.toggle('activo', visible);
+    }
 
-        function actualizarEstadoGrafo(nodos, aristas) {
-            document.getElementById('estadoGrafo').classList.add('activo');
-            document.getElementById('numNodos').textContent = nodos.join(', ') || 'ninguno';
-            document.getElementById('numAristas').textContent = aristas.length;
-        }
+    function actualizarEstadoGrafo(nodos, aristas) {
+        document.getElementById('estadoGrafo').classList.add('activo');
+        document.getElementById('numNodos').textContent = nodos.join(', ') || 'ninguno';
+        document.getElementById('numAristas').textContent = aristas.length;
+    }
 
-        function iniciarGrafo() {
-            limpiarErrores();
-            const dirigido = document.getElementById('tipoGrafo').value === 'true';
+    function iniciarGrafo() {
+        limpiarErrores();
+        const dirigido = document.getElementById('tipoGrafo').value === 'true';
 
-            fetch('/iniciar_grafo', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ dirigido })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.exito) {
-                    alert(`✓ ${data.mensaje}`);
-                    document.getElementById('resultado').classList.remove('activo');
-                    actualizarEstadoGrafo([], []);
-                } else {
-                    mostrarError(data.error);
-                }
-            })
-            .catch(err => mostrarError('Error: ' + err.message));
-        }
-
-        function agregarArista() {
-            limpiarErrores();
-            const origen = document.getElementById('inputArOrigen').value.trim().toUpperCase();
-            const destino = document.getElementById('inputArDestino').value.trim().toUpperCase();
-            const peso = parseFloat(document.getElementById('inputPeso').value);
-
-            if (!origen || !destino) {
-                mostrarError('Ingrese origen y destino');
-                return;
+        fetch('/iniciar_grafo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dirigido })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.exito) {
+                alert(`✓ ${data.mensaje}`);
+                habilitarSeccion(true);
+                document.getElementById('resultado').classList.remove('activo');
+                actualizarEstadoGrafo([], []);
+            } else {
+                mostrarError(data.error);
             }
+        })
+        .catch(err => mostrarError('Error: ' + err.message));
+    }
 
-            if (isNaN(peso) || peso <= 0) {
-                mostrarError('Ingrese un peso válido (mayor a 0)');
-                return;
+    function agregarArista() {
+        limpiarErrores();
+        const origen = document.getElementById('inputArOrigen').value.trim().toUpperCase();
+        const destino = document.getElementById('inputArDestino').value.trim().toUpperCase();
+        const peso = parseFloat(document.getElementById('inputPeso').value);
+
+        if (!origen || !destino) {
+            mostrarError('Ingrese origen y destino');
+            return;
+        }
+
+        if (isNaN(peso) || peso <= 0) {
+            mostrarError('Ingrese un peso válido (mayor a 0)');
+            return;
+        }
+
+        mostrarCargando(true);
+
+        fetch('/agregar_arista', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ origen, destino, peso })
+        })
+        .then(res => res.json())
+        .then(data => {
+            mostrarCargando(false);
+            if (data.exito) {
+                document.getElementById('inputArOrigen').value = '';
+                document.getElementById('inputArDestino').value = '';
+                document.getElementById('inputPeso').value = '1';
+
+                actualizarEstadoGrafo(data.nodos, data.aristas);
+
+                if (data.imagen) {
+                    const resultDiv = document.getElementById('resultado');
+                    resultDiv.classList.add('activo');
+                    document.getElementById('grafoImagen').src = `data:image/png;base64,${data.imagen}`;
+                    document.getElementById('infoAutomata').classList.remove('activo');
+                }
+            } else {
+                mostrarError(data.error);
             }
+        })
+        .catch(err => {
+            mostrarCargando(false);
+            mostrarError('Error: ' + err.message);
+        });
+    }
 
-            mostrarCargando(true);
+    function crearGrafoEjemplo() {
+        limpiarErrores();
+        mostrarCargando(true);
 
-            fetch('/agregar_arista', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ origen, destino, peso })
-            })
-            .then(res => res.json())
-            .then(data => {
-                mostrarCargando(false);
-                if (data.exito) {
-                    // Limpiar inputs
-                    document.getElementById('inputArOrigen').value = '';
-                    document.getElementById('inputArDestino').value = '';
-                    document.getElementById('inputPeso').value = '1';
-
-                    // Actualizar estado
-                    actualizarEstadoGrafo(data.nodos, data.aristas);
-
-                    // Mostrar imagen del grafo
-                    if (data.imagen) {
-                        const resultDiv = document.getElementById('resultado');
-                        resultDiv.classList.add('activo');
-                        document.getElementById('grafoImagen').src = `data:image/png;base64,${data.imagen}`;
-                        document.getElementById('infoAutomata').classList.remove('activo');
-                    }
-                } else {
-                    mostrarError(data.error);
+        fetch('/crear_grafo_ejemplo', {
+            method: 'POST'
+        })
+        .then(res => res.json())
+        .then(data => {
+            mostrarCargando(false);
+            if (data.exito) {
+                habilitarSeccion(true);
+                actualizarEstadoGrafo(data.nodos, data.aristas);
+                
+                if (data.imagen) {
+                    document.getElementById('resultado').classList.add('activo');
+                    document.getElementById('grafoImagen').src = `data:image/png;base64,${data.imagen}`;
+                    document.getElementById('infoAutomata').classList.remove('activo');
                 }
-            })
-            .catch(err => {
-                mostrarCargando(false);
-                mostrarError('Error: ' + err.message);
-            });
-        }
-
-        function crearGrafoEjemplo() {
-            limpiarErrores();
-            mostrarCargando(true);
-
-            fetch('/crear_grafo_ejemplo', {
-                method: 'POST'
-            })
-            .then(res => res.json())
-            .then(data => {
-                mostrarCargando(false);
-                if (data.exito) {
-                    actualizarEstadoGrafo(data.nodos, data.aristas);
-                    
-                    // Mostrar imagen del grafo
-                    if (data.imagen) {
-                        document.getElementById('resultado').classList.add('activo');
-                        document.getElementById('grafoImagen').src = `data:image/png;base64,${data.imagen}`;
-                        document.getElementById('infoAutomata').classList.remove('activo');
-                    }
-                } else {
-                    mostrarError(data.error);
-                }
-            })
-            .catch(err => {
-                mostrarCargando(false);
-                mostrarError('Error al crear grafo: ' + err.message);
-            });
-        }
-
-        function calcularRuta() {
-            limpiarErrores();
-            const origen = document.getElementById('inputOrigen').value.trim().toUpperCase();
-            const destino = document.getElementById('inputDestino').value.trim().toUpperCase();
-
-            if (!origen || !destino) {
-                mostrarError('Ingrese origen y destino');
-                return;
+            } else {
+                mostrarError(data.error);
             }
+        })
+        .catch(err => {
+            mostrarCargando(false);
+            mostrarError('Error al crear grafo: ' + err.message);
+        });
+    }
 
-            mostrarCargando(true);
+    function calcularRuta() {
+        limpiarErrores();
+        const origen = document.getElementById('inputOrigen').value.trim().toUpperCase();
+        const destino = document.getElementById('inputDestino').value.trim().toUpperCase();
 
-            fetch('/calcular_ruta', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ origen, destino })
-            })
-            .then(res => res.json())
-            .then(data => {
-                mostrarCargando(false);
-                if (data.exito) {
-                    mostrarResultado(data);
-                } else {
-                    mostrarError(data.error);
-                }
-            })
-            .catch(err => {
-                mostrarCargando(false);
-                mostrarError('Error al calcular ruta: ' + err.message);
-            });
+        if (!origen || !destino) {
+            mostrarError('Ingrese origen y destino');
+            return;
         }
 
-        function mostrarResultado(data) {
-            document.getElementById('resultado').classList.add('activo');
-            document.getElementById('distancia').textContent = data.distancia;
-            document.getElementById('ruta').textContent = data.ruta.join(' → ');
-            
-            // Mostrar validación
-            const val = data.validacion_formal;
-            const htmlValidacion = `
-                <div style="background: white; padding: 10px; border-radius: 4px; margin-bottom: 8px;">
-                    <p><strong>Aceptada:</strong> <span style="color: ${val.aceptada ? '#4caf50' : '#f44336'};">${val.aceptada ? 'SÍ ✓' : 'NO ✗'}</span></p>
-                    <p><strong>Costo Total:</strong> ${val.costo_total}</p>
-                </div>
-            `;
-            document.getElementById('validacion').innerHTML = htmlValidacion;
+        mostrarCargando(true);
 
-            // Mostrar imagen
-            document.getElementById('grafoImagen').src = `data:image/png;base64,${data.imagen}`;
+        fetch('/calcular_ruta', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ origen, destino })
+        })
+        .then(res => res.json())
+        .then(data => {
+            mostrarCargando(false);
+            if (data.exito) {
+                mostrarResultado(data);
+            } else {
+                mostrarError(data.error);
+            }
+        })
+        .catch(err => {
+            mostrarCargando(false);
+            mostrarError('Error al calcular ruta: ' + err.message);
+        });
+    }
 
-            // Mostrar detalles del autómata
-            const desc = data.descripcion_automata;
-            const htmlAutomata = `
-                <div class="automata-item"><strong>Estados (Q):</strong> {${desc.Q.join(', ')}}</div>
-                <div class="automata-item"><strong>Estado Inicial (q₀):</strong> ${desc.q0}</div>
-                <div class="automata-item"><strong>Estados Finales (F):</strong> {${desc.F.join(', ')}}</div>
-                <div class="automata-item"><strong>Transiciones:</strong> ${desc.transiciones}</div>
-            `;
-            document.getElementById('detallesAutomata').innerHTML = htmlAutomata;
-            document.getElementById('infoAutomata').classList.add('activo');
-        }
+    function mostrarResultado(data) {
+        document.getElementById('resultado').classList.add('activo');
+        document.getElementById('distancia').textContent = data.distancia;
+        document.getElementById('ruta').textContent = data.ruta.join(' → ');
+        
+        const val = data.validacion_formal;
+        const htmlValidacion = `
+            <div style="background: white; padding: 10px; border-radius: 4px; margin-bottom: 8px;">
+                <p><strong>Aceptada:</strong> <span style="color: ${val.aceptada ? '#4caf50' : '#f44336'};">${val.aceptada ? 'SÍ ✓' : 'NO ✗'}</span></p>
+                <p><strong>Costo Total:</strong> ${val.costo_total}</p>
+            </div>
+        `;
+        document.getElementById('validacion').innerHTML = htmlValidacion;
 
-        function obtenerInfoAutomata() {
-            limpiarErrores();
-            mostrarCargando(true);
+        document.getElementById('grafoImagen').src = `data:image/png;base64,${data.imagen}`;
 
-            fetch('/info_automata')
-            .then(res => res.json())
-            .then(data => {
-                mostrarCargando(false);
-                if (data.exito) {
-                    const desc = data.descripcion;
-                    alert(`
+        const desc = data.descripcion_automata;
+        const htmlAutomata = `
+            <div class="automata-item"><strong>Estados (Q):</strong> {${desc.Q.join(', ')}}</div>
+            <div class="automata-item"><strong>Estado Inicial (q₀):</strong> ${desc.q0}</div>
+            <div class="automata-item"><strong>Estados Finales (F):</strong> {${desc.F.join(', ')}}</div>
+            <div class="automata-item"><strong>Transiciones:</strong> ${desc.transiciones}</div>
+        `;
+        document.getElementById('detallesAutomata').innerHTML = htmlAutomata;
+        document.getElementById('infoAutomata').classList.add('activo');
+    }
+
+    function obtenerInfoAutomata() {
+        limpiarErrores();
+        mostrarCargando(true);
+
+        fetch('/info_automata')
+        .then(res => res.json())
+        .then(data => {
+            mostrarCargando(false);
+            if (data.exito) {
+                const desc = data.descripcion;
+                alert(`
 DESCRIPCIÓN FORMAL DEL AUTÓMATA
 ═══════════════════════════════
 
@@ -685,24 +754,26 @@ Estado Inicial (q₀): ${desc.q0}
 Estados de Aceptación (F): {${desc.F.join(', ')}}
 
 Total de Transiciones: ${desc.transiciones}
-                    `);
-                } else {
-                    mostrarError(data.error);
-                }
-            })
-            .catch(err => {
-                mostrarCargando(false);
-                mostrarError('Error: ' + err.message);
-            });
-        }
+                `);
+            } else {
+                mostrarError(data.error);
+            }
+        })
+        .catch(err => {
+            mostrarCargando(false);
+            mostrarError('Error: ' + err.message);
+        });
+    }
 
-        // Permitir Enter en los inputs
-        document.getElementById('inputOrigen').addEventListener('keypress', e => {
-            if (e.key === 'Enter') calcularRuta();
-        });
-        document.getElementById('inputDestino').addEventListener('keypress', e => {
-            if (e.key === 'Enter') calcularRuta();
-        });
+    document.getElementById('inputOrigen').addEventListener('keypress', e => {
+        if (e.key === 'Enter' && grafoInicializado) calcularRuta();
+    });
+    document.getElementById('inputDestino').addEventListener('keypress', e => {
+        if (e.key === 'Enter' && grafoInicializado) calcularRuta();
+    });
+
+    // Al cargar la página, bloquear la sección
+    habilitarSeccion(false);
     </script>
 </body>
 </html>
