@@ -10,6 +10,10 @@ import warnings
 warnings.filterwarnings('ignore')  # Ignorar warnings menores
 from grafo import Grafo
 from automata_formal import Automata
+from flask import send_file
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+
 
 app = Flask(__name__, static_folder='output', static_url_path='/output')
 
@@ -151,6 +155,58 @@ def calcular_ruta():
         'imagen': img_base64,
         'descripcion_automata': automata.obtener_descripcion_formal()
     })
+
+
+
+@app.route('/descargar_grafo/<formato>', methods=['GET'])
+def descargar_grafo(formato):
+    """Genera y descarga el grafo actual como PNG o PDF."""
+    global grafo_global
+
+    if grafo_global is None or len(grafo_global.obtener_nodos()) == 0:
+        return jsonify({'exito': False, 'error': 'No hay grafo para descargar'}), 400
+
+    # Crear grafo con NetworkX
+    G = nx.Graph() if not grafo_global.dirigido else nx.DiGraph()
+    for nodo in grafo_global.obtener_nodos():
+        G.add_node(nodo)
+    for origen, destino, peso in grafo_global.obtener_aristas():
+        G.add_edge(origen, destino, weight=peso)
+
+    pos = nx.spring_layout(G, k=2, iterations=50, seed=42)
+
+    plt.figure(figsize=(10, 8))
+    nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=1500, font_weight='bold')
+    edge_labels = {(u, v): w for u, v, w in grafo_global.obtener_aristas()}
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+    plt.axis('off')
+
+    # Guardar temporalmente
+    if formato.lower() == 'png':
+        output_path = 'output/grafo.png'
+        plt.savefig(output_path, format='png', dpi=100, bbox_inches='tight')
+        plt.close()
+        return send_file(output_path, as_attachment=True, download_name='grafo.png', mimetype='image/png')
+
+    elif formato.lower() == 'pdf':
+        # Generar PNG temporal
+        buffer_img = BytesIO()
+        plt.savefig(buffer_img, format='png', dpi=100, bbox_inches='tight')
+        plt.close()
+        buffer_img.seek(0)
+
+        # Crear PDF y añadir la imagen
+        pdf_path = 'output/grafo.pdf'
+        c = canvas.Canvas(pdf_path, pagesize=letter)
+        c.drawImage(buffer_img, 50, 200, width=500, height=400)
+        c.showPage()
+        c.save()
+        return send_file(pdf_path, as_attachment=True, download_name='grafo.pdf', mimetype='application/pdf')
+
+    else:
+        return jsonify({'exito': False, 'error': 'Formato no válido (usa png o pdf)'}), 400
+
+
 
 def generar_visualizacion_simple():
     """Genera visualización básica del grafo actual sin ruta destacada"""

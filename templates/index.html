@@ -34,6 +34,30 @@
             text-align: center;
         }
 
+        .boton-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 25px; /* separa el botón de los demás elementos */
+        }
+
+        .boton-descarga {
+            background: linear-gradient(135deg, #4a90e2, #357ab8);
+            color: #fff;
+            font-weight: 600;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            transition: transform 0.2s ease, box-shadow 0.3s ease, background 0.3s ease;
+        }
+
+        .boton-descarga:hover {
+            background: linear-gradient(135deg, #5aa0f0, #468ed0);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+
         .encabezado h1 {
             font-size: 2em;
             margin-bottom: 10px;
@@ -381,7 +405,7 @@
                 <div class="error" id="error"></div>
             </div>
 
-            <!-- Panel de Resultados (Derecha) -->
+           <!-- Panel de Resultados (Derecha) -->
             <div class="panel">
                 <h2>📈 Resultados</h2>
 
@@ -404,13 +428,50 @@
                     <img id="grafoImagen" class="grafo-imagen" alt="Visualización del grafo">
 
                     <div class="automata-info" id="infoAutomata">
-                        <h4>ℹ️ Información del Autómata</h4>
+                        <h4> Información del Autómata</h4>
                         <div id="detallesAutomata"></div>
+                    </div>
+
+                    <!-- 🔽 Botón centrado y con estilo mejorado -->
+                    <div class="boton-container">
+                        <button class="boton boton-descarga" onclick="descargarGrafo('png')">
+                            🖼️ Descargar Grafo 1 (PNG)
+                        </button>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+
+
+            
+
+    <script>
+    async function descargarGrafo(formato) {
+        try {
+            const response = await fetch(`/descargar_grafo/${formato}`, {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error('No se pudo generar la descarga');
+            }
+
+            // Convertir a blob (archivo)
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+
+            // Crear enlace temporal para descargar
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `grafo.${formato}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            mostrarError(`❌ Error al descargar: ${error.message}`);
+        }
+    }
+</script>
 
     <script>
         function limpiarErrores() {
@@ -420,7 +481,7 @@
 
         function mostrarError(mensaje) {
             const errorDiv = document.getElementById('error');
-            errorDiv.innerHTML = `❌ ${mensaje}`;
+            errorDiv.innerHTML = `${mensaje}`;
             errorDiv.classList.add('activo');
         }
 
