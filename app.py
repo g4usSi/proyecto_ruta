@@ -231,10 +231,29 @@ def generar_visualizacion_simple():
     pos = nx.spring_layout(G, k=2, iterations=50, seed=42)
     
     # Dibujar nodos
-    nx.draw_networkx_nodes(G, pos, node_color='lightblue', node_size=1500)
+    nx.draw(
+    G, pos,
+    with_labels=True,
+    node_color='lightblue',
+    node_size=1500,
+    font_weight='bold',
+    arrows=grafo_global.dirigido,   
+    arrowsize=20,
+    connectionstyle="arc3,rad=0.05"
+    )
+    
     
     # Dibujar aristas
-    nx.draw_networkx_edges(G, pos, width=2, edge_color='gray')
+    nx.draw_networkx_edges(
+    G,
+    pos,
+    width=2,
+    edge_color='gray',
+    arrows=grafo_global.dirigido,    
+    arrowsize=20,
+    connectionstyle="arc3,rad=0.05"  
+    )
+
     
     # Dibujar etiquetas
     nx.draw_networkx_labels(G, pos, font_size=12, font_weight='bold')
@@ -289,10 +308,25 @@ def generar_visualizacion(ruta_destacada):
                     for i in range(len(ruta_destacada)-1)]
     aristas_normales = [(u, v) for u, v in G.edges() if (u, v) not in aristas_ruta and (v, u) not in aristas_ruta]
     
-    nx.draw_networkx_edges(G, pos, edgelist=aristas_normales, 
-                          width=1, edge_color='gray')
-    nx.draw_networkx_edges(G, pos, edgelist=aristas_ruta, 
-                          width=3, edge_color='red')
+    # Dibujar aristas normales
+    nx.draw_networkx_edges(
+        G, pos,
+        edgelist=aristas_normales,
+        width=1, edge_color='gray',
+        arrows=grafo_global.dirigido,
+        arrowsize=20,
+        connectionstyle="arc3,rad=0.05"
+    )
+
+# Dibujar aristas de la ruta con color rojo
+    nx.draw_networkx_edges(
+        G, pos,
+        edgelist=aristas_ruta,
+        width=3, edge_color='red',
+        arrows=grafo_global.dirigido,
+        arrowsize=25,
+        connectionstyle="arc3,rad=0.05"
+    )
     
     # Dibujar etiquetas
     nx.draw_networkx_labels(G, pos, font_size=12, font_weight='bold')
