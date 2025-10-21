@@ -18,7 +18,6 @@ from reportlab.lib.pagesizes import letter
 
 app = Flask(__name__, static_folder='output', static_url_path='/output')
 
-# Crear carpeta output si no existe
 if not os.path.exists('output'):
     os.makedirs('output')
 
@@ -40,6 +39,8 @@ COLORES = {
 
 # Grafo global que se mantendrá en sesión
 grafo_global = None
+ruta_actual = None  # Guardar la ruta actual
+distancia_actual = None  # Guardar la distancia actual
 
 
 @app.route('/')
@@ -101,11 +102,6 @@ def agregar_arista():
 
 @app.route('/crear_grafo_ejemplo', methods=['POST'])
 def crear_grafo_ejemplo():
-    """
-    Crea un grafo de ejemplo para demostración.
-    Grafo: A -> B(4) -> D(2)
-               -> C(2) -> D(3)
-    """
     global grafo_global
 
     grafo_global = Grafo(dirigido=False)
@@ -175,15 +171,13 @@ def calcular_ruta():
         'descripcion_automata': automata.obtener_descripcion_formal()
     })
 
-
 @app.route('/descargar_grafo/<formato>', methods=['GET'])
 def descargar_grafo(formato):
-    global grafo_global
+    global grafo_global, ruta_actual, distancia_actual
 
     if grafo_global is None or len(grafo_global.obtener_nodos()) == 0:
         return jsonify({'exito': False, 'error': 'No hay grafo para descargar'}), 400
 
-    # Crear grafo con NetworkX
     G = nx.Graph() if not grafo_global.dirigido else nx.DiGraph()
     for nodo in grafo_global.obtener_nodos():
         G.add_node(nodo)
@@ -203,7 +197,6 @@ def descargar_grafo(formato):
     nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
     plt.axis('off')
 
-    # Guardar temporalmente
     if formato.lower() == 'png':
         output_path = 'output/grafo.png'
         plt.savefig(output_path, format='png', dpi=100, bbox_inches='tight',
@@ -222,7 +215,25 @@ def descargar_grafo(formato):
         # Crear PDF y añadir la imagen
         pdf_path = 'output/grafo.pdf'
         c = canvas.Canvas(pdf_path, pagesize=letter)
-        c.drawImage(buffer_img, 50, 200, width=500, height=400)
+        
+        # Agregar imagen
+        fig.savefig(img_buffer, format='png', dpi=100, bbox_inches='tight')
+        plt.close(fig)
+        img_buffer.seek(0)
+        
+        c.drawImage(img_buffer, 50, 350, width=500, height=350)
+        
+        # Agregar información de ruta si existe
+        if ruta_actual and distancia_actual is not None:
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(50, 320, "Información de Ruta:")
+            
+            c.setFont("Helvetica", 11)
+            # Formato: A -> B -> C -> ...
+            ruta_texto = " → ".join(ruta_actual)
+            c.drawString(50, 300, f"Ruta: {ruta_texto}")
+            c.drawString(50, 280, f"Costo Total: {distancia_actual}")
+        
         c.showPage()
         c.save()
         return send_file(pdf_path, as_attachment=True, download_name='grafo.pdf', mimetype='application/pdf')
@@ -377,7 +388,6 @@ def generar_visualizacion(ruta_destacada):
 
 @app.route('/obtener_grafo', methods=['GET'])
 def obtener_grafo():
-    """Retorna la información actual del grafo"""
     global grafo_global
 
     if grafo_global is None:
@@ -392,7 +402,6 @@ def obtener_grafo():
 
 @app.route('/info_automata', methods=['GET'])
 def info_automata():
-    """Retorna la información formal del autómata"""
     global grafo_global
 
     if grafo_global is None:
