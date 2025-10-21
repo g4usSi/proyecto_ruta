@@ -1,13 +1,13 @@
 from flask import Flask, render_template, request, jsonify
 import matplotlib
-matplotlib.use('Agg')  # Backend sin GUI para evitar warnings
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import networkx as nx
 from io import BytesIO
 import base64
 import os
 import warnings
-warnings.filterwarnings('ignore')  # Ignorar warnings menores
+warnings.filterwarnings('ignore')
 from grafo import Grafo
 from automata_formal import Automata
 from flask import send_file
@@ -17,12 +17,12 @@ from reportlab.lib.pagesizes import letter
 
 app = Flask(__name__, static_folder='output', static_url_path='/output')
 
-# Crear carpeta output si no existe
 if not os.path.exists('output'):
     os.makedirs('output')
 
-# Grafo global que se mantendrá en sesión
 grafo_global = None
+ruta_actual = None  # Guardar la ruta actual
+distancia_actual = None  # Guardar la distancia actual
 
 @app.route('/')
 def inicio():
@@ -64,10 +64,8 @@ def agregar_arista():
     if peso <= 0:
         return jsonify({'exito': False, 'error': 'El peso debe ser mayor a 0'}), 400
     
-    # Agregar arista
     grafo_global.agregar_arista(origen, destino, peso)
     
-    # Generar visualización
     img_base64 = generar_visualizacion_simple()
     
     return jsonify({
@@ -80,16 +78,10 @@ def agregar_arista():
 
 @app.route('/crear_grafo_ejemplo', methods=['POST'])
 def crear_grafo_ejemplo():
-    """
-    Crea un grafo de ejemplo para demostración.
-    Grafo: A -> B(4) -> D(2)
-               -> C(2) -> D(3)
-    """
     global grafo_global
     
     grafo_global = Grafo(dirigido=False)
     
-    # Agregar aristas
     aristas = [
         ('A', 'B', 4),
         ('A', 'C', 2),
@@ -102,7 +94,6 @@ def crear_grafo_ejemplo():
     for origen, destino, peso in aristas:
         grafo_global.agregar_arista(origen, destino, peso)
     
-    # Generar visualización
     img_base64 = generar_visualizacion_simple()
     
     return jsonify({
@@ -115,8 +106,7 @@ def crear_grafo_ejemplo():
 
 @app.route('/calcular_ruta', methods=['POST'])
 def calcular_ruta():
-    """Calcula la ruta más corta entre dos nodos"""
-    global grafo_global
+    global grafo_global, ruta_actual, distancia_actual
     
     if grafo_global is None:
         return jsonify({'exito': False, 'error': 'Grafo no inicializado'}), 400
@@ -128,7 +118,6 @@ def calcular_ruta():
     if not origen or not destino:
         return jsonify({'exito': False, 'error': 'Origen y destino requeridos'}), 400
     
-    # Calcular ruta usando Dijkstra
     distancia, ruta = grafo_global.dijkstra(origen, destino)
     
     if not ruta:
@@ -137,11 +126,13 @@ def calcular_ruta():
             'error': f'No hay ruta entre {origen} y {destino}'
         }), 404
     
-    # Crear autómata para validar formalmente la ruta
+    # Guardar la ruta y distancia actual
+    ruta_actual = ruta
+    distancia_actual = distancia
+    
     automata = Automata(grafo_global, origen, destino)
     validacion = automata.procesar_cadena(ruta)
     
-    # Generar visualización con ruta destacada
     img_base64 = generar_visualizacion(ruta)
     
     return jsonify({
@@ -153,16 +144,13 @@ def calcular_ruta():
         'descripcion_automata': automata.obtener_descripcion_formal()
     })
 
-
-
 @app.route('/descargar_grafo/<formato>', methods=['GET'])
 def descargar_grafo(formato):
-    global grafo_global
+    global grafo_global, ruta_actual, distancia_actual
 
     if grafo_global is None or len(grafo_global.obtener_nodos()) == 0:
         return jsonify({'exito': False, 'error': 'No hay grafo para descargar'}), 400
 
-    # Crear grafo con NetworkX
     G = nx.Graph() if not grafo_global.dirigido else nx.DiGraph()
     for nodo in grafo_global.obtener_nodos():
         G.add_node(nodo)
@@ -171,30 +159,41 @@ def descargar_grafo(formato):
 
     pos = nx.spring_layout(G, k=2, iterations=50, seed=42)
 
-    plt.figure(figsize=(10, 8))
-    nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=1500, font_weight='bold')
-    edge_labels = {(u, v): w for u, v, w in grafo_global.obtener_aristas()}
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
-    plt.axis('off')
+    # Crear la visualización (con ruta si existe)
+    if ruta_actual:
+        fig, img_buffer = crear_figura_con_ruta(G, pos)
+    else:
+        fig, img_buffer = crear_figura_simple(G, pos)
 
-    # Guardar temporalmente
     if formato.lower() == 'png':
         output_path = 'output/grafo.png'
-        plt.savefig(output_path, format='png', dpi=100, bbox_inches='tight')
-        plt.close()
+        fig.savefig(output_path, format='png', dpi=100, bbox_inches='tight')
+        plt.close(fig)
         return send_file(output_path, as_attachment=True, download_name='grafo.png', mimetype='image/png')
 
     elif formato.lower() == 'pdf':
-        # Generar PNG temporal
-        buffer_img = BytesIO()
-        plt.savefig(buffer_img, format='png', dpi=100, bbox_inches='tight')
-        plt.close()
-        buffer_img.seek(0)
-
-        # Crear PDF y añadir la imagen
+        # Generar PDF con imagen y información de ruta
         pdf_path = 'output/grafo.pdf'
         c = canvas.Canvas(pdf_path, pagesize=letter)
-        c.drawImage(buffer_img, 50, 200, width=500, height=400)
+        
+        # Agregar imagen
+        fig.savefig(img_buffer, format='png', dpi=100, bbox_inches='tight')
+        plt.close(fig)
+        img_buffer.seek(0)
+        
+        c.drawImage(img_buffer, 50, 350, width=500, height=350)
+        
+        # Agregar información de ruta si existe
+        if ruta_actual and distancia_actual is not None:
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(50, 320, "Información de Ruta:")
+            
+            c.setFont("Helvetica", 11)
+            # Formato: A -> B -> C -> ...
+            ruta_texto = " → ".join(ruta_actual)
+            c.drawString(50, 300, f"Ruta: {ruta_texto}")
+            c.drawString(50, 280, f"Costo Total: {distancia_actual}")
+        
         c.showPage()
         c.save()
         return send_file(pdf_path, as_attachment=True, download_name='grafo.pdf', mimetype='application/pdf')
@@ -202,59 +201,32 @@ def descargar_grafo(formato):
     else:
         return jsonify({'exito': False, 'error': 'Formato no válido (usa png o pdf)'}), 400
 
-
-
-def generar_visualizacion_simple():
-    """Genera visualización básica del grafo actual sin ruta destacada"""
-    global grafo_global
+def crear_figura_simple(G, pos):
+    """Crea una figura simple del grafo"""
+    fig = plt.figure(figsize=(10, 8))
     
-    if grafo_global is None or len(grafo_global.obtener_nodos()) == 0:
-        return None
-    
-    # Crear grafo NetworkX
-    G = nx.Graph() if not grafo_global.dirigido else nx.DiGraph()
-    
-    # Agregar nodos
-    for nodo in grafo_global.obtener_nodos():
-        G.add_node(nodo)
-    
-    # Agregar aristas
-    for origen, destino, peso in grafo_global.obtener_aristas():
-        G.add_edge(origen, destino, weight=peso)
-    
-    # Crear figura
-    plt.figure(figsize=(10, 8))
-    pos = nx.spring_layout(G, k=2, iterations=50, seed=42)
-    
-    # Dibujar nodos
     nx.draw(
-    G, pos,
-    with_labels=True,
-    node_color='lightblue',
-    node_size=1500,
-    font_weight='bold',
-    arrows=grafo_global.dirigido,   
-    arrowsize=20,
-    connectionstyle="arc3,rad=0.05"
+        G, pos,
+        with_labels=True,
+        node_color='lightblue',
+        node_size=1500,
+        font_weight='bold',
+        arrows=grafo_global.dirigido,
+        arrowsize=20,
+        connectionstyle="arc3,rad=0.05"
     )
     
-    
-    # Dibujar aristas
     nx.draw_networkx_edges(
-    G,
-    pos,
-    width=2,
-    edge_color='gray',
-    arrows=grafo_global.dirigido,    
-    arrowsize=20,
-    connectionstyle="arc3,rad=0.05"  
+        G, pos,
+        width=2,
+        edge_color='gray',
+        arrows=grafo_global.dirigido,
+        arrowsize=20,
+        connectionstyle="arc3,rad=0.05"
     )
-
     
-    # Dibujar etiquetas
     nx.draw_networkx_labels(G, pos, font_size=12, font_weight='bold')
     
-    # Dibujar pesos
     edge_labels = {(u, v): w for u, v, w in grafo_global.obtener_aristas()}
     nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size=10)
     
@@ -262,49 +234,25 @@ def generar_visualizacion_simple():
     plt.axis('off')
     plt.tight_layout()
     
-    # Convertir a base64
     buffer = BytesIO()
-    plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
-    buffer.seek(0)
-    imagen_base64 = base64.b64encode(buffer.read()).decode()
-    plt.close()
-    
-    return imagen_base64
+    return fig, buffer
 
-def generar_visualizacion(ruta_destacada):
-    """Genera visualización del grafo con la ruta destacada"""
-    global grafo_global
+def crear_figura_con_ruta(G, pos):
+    """Crea una figura del grafo con la ruta destacada"""
+    fig = plt.figure(figsize=(10, 8))
     
-    # Crear grafo NetworkX
-    G = nx.Graph() if not grafo_global.dirigido else nx.DiGraph()
-    
-    # Agregar nodos
-    for nodo in grafo_global.obtener_nodos():
-        G.add_node(nodo)
-    
-    # Agregar aristas
-    for origen, destino, peso in grafo_global.obtener_aristas():
-        G.add_edge(origen, destino, weight=peso)
-    
-    # Crear figura
-    plt.figure(figsize=(10, 8))
-    pos = nx.spring_layout(G, k=2, iterations=50, seed=42)
-    
-    # Dibujar nodos normales
-    nodos_normales = [n for n in G.nodes() if n not in ruta_destacada]
+    nodos_normales = [n for n in G.nodes() if n not in ruta_actual]
     nx.draw_networkx_nodes(G, pos, nodelist=nodos_normales, 
                           node_color='lightblue', node_size=1500)
     
-    # Dibujar nodos de la ruta
-    nx.draw_networkx_nodes(G, pos, nodelist=ruta_destacada, 
+    nx.draw_networkx_nodes(G, pos, nodelist=ruta_actual, 
                           node_color='lightcoral', node_size=1500)
     
-    # Dibujar aristas normales
-    aristas_ruta = [(ruta_destacada[i], ruta_destacada[i+1]) 
-                    for i in range(len(ruta_destacada)-1)]
-    aristas_normales = [(u, v) for u, v in G.edges() if (u, v) not in aristas_ruta and (v, u) not in aristas_ruta]
+    aristas_ruta = [(ruta_actual[i], ruta_actual[i+1]) 
+                    for i in range(len(ruta_actual)-1)]
+    aristas_normales = [(u, v) for u, v in G.edges() 
+                        if (u, v) not in aristas_ruta and (v, u) not in aristas_ruta]
     
-    # Dibujar aristas normales
     nx.draw_networkx_edges(
         G, pos,
         edgelist=aristas_normales,
@@ -314,7 +262,6 @@ def generar_visualizacion(ruta_destacada):
         connectionstyle="arc3,rad=0.05"
     )
 
-# Dibujar aristas de la ruta con color rojo
     nx.draw_networkx_edges(
         G, pos,
         edgelist=aristas_ruta,
@@ -324,10 +271,118 @@ def generar_visualizacion(ruta_destacada):
         connectionstyle="arc3,rad=0.05"
     )
     
-    # Dibujar etiquetas
     nx.draw_networkx_labels(G, pos, font_size=12, font_weight='bold')
     
-    # Dibujar pesos
+    edge_labels = {(u, v): w for u, v, w in grafo_global.obtener_aristas()}
+    nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size=10)
+    
+    plt.title('Grafo con Ruta Mas Corta Destacada', fontsize=16, fontweight='bold')
+    plt.axis('off')
+    plt.tight_layout()
+    
+    buffer = BytesIO()
+    return fig, buffer
+
+def generar_visualizacion_simple():
+    global grafo_global
+    
+    if grafo_global is None or len(grafo_global.obtener_nodos()) == 0:
+        return None
+    
+    G = nx.Graph() if not grafo_global.dirigido else nx.DiGraph()
+    
+    for nodo in grafo_global.obtener_nodos():
+        G.add_node(nodo)
+    
+    for origen, destino, peso in grafo_global.obtener_aristas():
+        G.add_edge(origen, destino, weight=peso)
+    
+    plt.figure(figsize=(10, 8))
+    pos = nx.spring_layout(G, k=2, iterations=50, seed=42)
+    
+    nx.draw(
+        G, pos,
+        with_labels=True,
+        node_color='lightblue',
+        node_size=1500,
+        font_weight='bold',
+        arrows=grafo_global.dirigido,
+        arrowsize=20,
+        connectionstyle="arc3,rad=0.05"
+    )
+    
+    nx.draw_networkx_edges(
+        G, pos,
+        width=2,
+        edge_color='gray',
+        arrows=grafo_global.dirigido,
+        arrowsize=20,
+        connectionstyle="arc3,rad=0.05"
+    )
+    
+    nx.draw_networkx_labels(G, pos, font_size=12, font_weight='bold')
+    
+    edge_labels = {(u, v): w for u, v, w in grafo_global.obtener_aristas()}
+    nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size=10)
+    
+    plt.title('Grafo Actual', fontsize=16, fontweight='bold')
+    plt.axis('off')
+    plt.tight_layout()
+    
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+    buffer.seek(0)
+    imagen_base64 = base64.b64encode(buffer.read()).decode()
+    plt.close()
+    
+    return imagen_base64
+
+def generar_visualizacion(ruta_destacada):
+    global grafo_global
+    
+    G = nx.Graph() if not grafo_global.dirigido else nx.DiGraph()
+    
+    for nodo in grafo_global.obtener_nodos():
+        G.add_node(nodo)
+    
+    for origen, destino, peso in grafo_global.obtener_aristas():
+        G.add_edge(origen, destino, weight=peso)
+    
+    plt.figure(figsize=(10, 8))
+    pos = nx.spring_layout(G, k=2, iterations=50, seed=42)
+    
+    nodos_normales = [n for n in G.nodes() if n not in ruta_destacada]
+    nx.draw_networkx_nodes(G, pos, nodelist=nodos_normales, 
+                          node_color='lightblue', node_size=1500)
+    
+    nx.draw_networkx_nodes(G, pos, nodelist=ruta_destacada, 
+                          node_color='lightcoral', node_size=1500)
+    
+    aristas_ruta = [(ruta_destacada[i], ruta_destacada[i+1]) 
+                    for i in range(len(ruta_destacada)-1)]
+    aristas_normales = [(u, v) for u, v in G.edges() 
+                        if (u, v) not in aristas_ruta and (v, u) not in aristas_ruta]
+    
+    nx.draw_networkx_edges(
+        G, pos,
+        edgelist=aristas_normales,
+        width=1, edge_color='gray',
+        arrows=grafo_global.dirigido,
+        arrowsize=20,
+        connectionstyle="arc3,rad=0.05"
+    )
+
+    nx.draw_networkx_edges(
+        G, pos,
+        edgelist=aristas_ruta,
+        width=3, edge_color='red',
+        arrows=grafo_global.dirigido,
+        arrowsize=25,
+        connectionstyle="arc3,rad=0.05"
+    )
+    
+    nx.draw_networkx_labels(G, pos, font_size=12, font_weight='bold')
+    
     edge_labels = {(u, v): w for u, v, w in grafo_global.obtener_aristas()}
     nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size=10)
     
@@ -335,7 +390,6 @@ def generar_visualizacion(ruta_destacada):
     plt.axis('off')
     plt.tight_layout()
     
-    # Convertir a base64
     buffer = BytesIO()
     plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
     buffer.seek(0)
@@ -346,7 +400,6 @@ def generar_visualizacion(ruta_destacada):
 
 @app.route('/obtener_grafo', methods=['GET'])
 def obtener_grafo():
-    """Retorna la información actual del grafo"""
     global grafo_global
     
     if grafo_global is None:
@@ -360,13 +413,11 @@ def obtener_grafo():
 
 @app.route('/info_automata', methods=['GET'])
 def info_automata():
-    """Retorna la información formal del autómata"""
     global grafo_global
     
     if grafo_global is None:
         return jsonify({'exito': False, 'error': 'Grafo no inicializado'}), 400
     
-    # Usar el primer y último nodo como ejemplo
     nodos = grafo_global.obtener_nodos()
     if len(nodos) < 2:
         return jsonify({'exito': False, 'error': 'Se necesitan al menos 2 nodos'}), 400
